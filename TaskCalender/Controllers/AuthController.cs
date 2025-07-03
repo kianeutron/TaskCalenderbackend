@@ -28,10 +28,24 @@ namespace TaskCalender.Controllers
         [HttpPost("login")]
         public IActionResult Login([FromBody] LoginRequest request)
         {
+            try
+            {
+                var response = AuthenticateUser(request);
+                if (response == null)
+                    return Unauthorized("Invalid username or password");
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+
+        private LoginResponse AuthenticateUser(LoginRequest request)
+        {
             var user = _context.Principals.FirstOrDefault(u => u.pcl_UserName == request.UserName && u.pcl_Password == request.Password);
             if (user == null)
-                return Unauthorized("Invalid username or password");
-
+                return null;
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.ASCII.GetBytes(JwtSecret);
             var tokenDescriptor = new SecurityTokenDescriptor
@@ -46,13 +60,12 @@ namespace TaskCalender.Controllers
             };
             var token = tokenHandler.CreateToken(tokenDescriptor);
             var tokenString = tokenHandler.WriteToken(token);
-
-            return Ok(new LoginResponse
+            return new LoginResponse
             {
                 Token = tokenString,
                 UserName = user.pcl_UserName,
                 UserId = user.pcl_Id
-            });
+            };
         }
     }
 } 

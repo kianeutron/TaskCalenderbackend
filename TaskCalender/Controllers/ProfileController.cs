@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.OData.Routing.Controllers;
 using System.Linq;
 using System.Security.Claims;
 using TaskCalender.Data;
+using TaskCalender.Models;
 
 namespace TaskCalender.Controllers
 {
@@ -20,19 +21,28 @@ namespace TaskCalender.Controllers
         [HttpGet("Me")]
         public IActionResult GetMyProfile()
         {
+            try
+            {
+                var profile = GetProfileForCurrentUser();
+                if (profile == null)
+                    return NotFound();
+                return Ok(profile);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+
+        private Relation GetProfileForCurrentUser()
+        {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null)
-                return Unauthorized();
-
+                return null;
             var principal = _context.Principals.FirstOrDefault(p => p.pcl_Id.ToString() == userId);
             if (principal == null)
-                return NotFound();
-
-            var profile = _context.Relations.FirstOrDefault(r => r.rel_Id == principal.Relation_rel_Id);
-            if (profile == null)
-                return NotFound();
-
-            return Ok(profile);
+                return null;
+            return _context.Relations.FirstOrDefault(r => r.rel_Id == principal.Relation_rel_Id);
         }
     }
 } 
